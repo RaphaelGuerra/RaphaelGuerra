@@ -1,12 +1,14 @@
 name: Generate contribution snake
 
 on:
+  workflow_dispatch:
+  push:
+    branches: [main]
   schedule:
-    - cron: "0 2 * * *"   # runs daily at 02:00 UTC
-  workflow_dispatch:       # allow manual runs
+    - cron: "0 2 * * *"
 
 permissions:
-  contents: write          # needed to commit the generated files
+  contents: write
 
 jobs:
   build:
@@ -14,16 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Generate SVGs/GIF from your contribution graph
-      - name: Generate snake
-        uses: Platane/snk@v3
+      # Use the non-Docker variant:
+      - name: Generate snake (SVG only)
+        uses: Platane/snk/svg-only@v3
         with:
           github_user_name: ${{ github.repository_owner }}
           outputs: |
             dist/github-snake.svg
             dist/github-snake-dark.svg?palette=github-dark
 
-      # Commit the artifacts back into the repo
       - name: Commit files
         run: |
           mkdir -p assets
