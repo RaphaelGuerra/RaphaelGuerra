@@ -13,6 +13,16 @@ Product-minded: simple apps that solve one problem well
 
 ---
 
+## 📈 Contributions Fun
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/snake-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="assets/snake.svg" />
+  <img alt="Contribution snake" src="assets/snake.svg" />
+</picture>
+
+---
+
 ## 🏗️ Featured Projects
 
 - **[ledger](https://github.com/RaphaelGuerra/ledger)**  
@@ -47,16 +57,6 @@ Product-minded: simple apps that solve one problem well
 - **[raphaelguerra.com](https://github.com/RaphaelGuerra/raphaelguerra.com)** — personal site (source)
 - **[Phaelix website](https://github.com/RaphaelGuerra/phaelix-website)** — product site scaffolding
 - **Eco Explorer**: [app](https://github.com/RaphaelGuerra/eco-explorer) • [website](https://github.com/RaphaelGuerra/eco-explorer-website)
-
----
-
-## 📈 Contributions Fun
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/snake-dark.svg" />
-  <source media="(prefers-color-scheme: light)" srcset="assets/snake.svg" />
-  <img alt="Contribution snake" src="assets/snake.svg" />
-</picture>
 
 ---
 
