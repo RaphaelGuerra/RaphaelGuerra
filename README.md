@@ -1,6 +1,6 @@
 <h1 align="center">Raphael Guerra</h1>
 <p align="center">
-ERP & AI Hobbyst<br/>
+ERP & AI Hobbyist<br/>
 Automation-first workflows · Clean UIs · Practical reliability
 </p>
 
