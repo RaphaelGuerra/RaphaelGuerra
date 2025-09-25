@@ -1,6 +1,6 @@
 <h1 align="center">Raphael Guerra</h1>
 <p align="center">
-ERP & AI Engineer · Oracle Fusion & NetSuite<br/>
+ERP & AI Hobbyst<br/>
 Automation-first workflows · Clean UIs · Practical reliability
 </p>
 
@@ -9,9 +9,7 @@ Automation-first workflows · Clean UIs · Practical reliability
 ## 👋 About Me
 I bridge **business ops** and **technical execution**. I build small, reliable tools and UIs that reduce manual effort and keep audit trails clean.
 
-- L1 support & triage across **Oracle Fusion** + **NetSuite**
-- Focus areas: **security**, **reporting/OTBI/BI Publisher**, **FBDI/data loads**, **REST APIs / OIC (basics)**
-- Product-minded: simple apps that solve one problem well
+Product-minded: simple apps that solve one problem well
 
 ---
 
@@ -40,8 +38,7 @@ I bridge **business ops** and **technical execution**. I build small, reliable t
 
 ## 🛠️ Tech & Tools
 
-`Oracle Fusion` · `NetSuite` · `OTBI / BI Publisher` · `FBDI` · `REST / SOAP APIs`  
-`React` · `TypeScript` · `Python` · `GitHub Actions` · `Playwright` · `Docker (dev)` · `SQL / PL/SQL`
+`REST / SOAP APIs` · `React` · `TypeScript` · `Python` · `GitHub Actions` · `Playwright` · `Docker (dev)` · `SQL / PL/SQL`
 
 ---
 
