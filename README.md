@@ -42,7 +42,7 @@ Product-minded: simple apps that solve one problem well
 
 - **[weight-tracker](https://github.com/RaphaelGuerra/weight-tracker)**  
   *TypeScript (MIT)* — Minimal TS app with clean UI.  
-  <sub>Alt (backend/data focus): pin **[buffer](https://github.com/RaphaelGuerra/buffer)** (PLSQL) or **[LFM-DB-Test](https://github.com/RaphaelGuerra/LFM-DB-Test)**.</sub>
+  <sub>Alt (backend/data focus): pin **[buffer](https://github.com/RaphaelGuerra/buffer)** (PL/SQL) or **[LFM-DB-Test](https://github.com/RaphaelGuerra/LFM-DB-Test)**.</sub>
 
 ---
 
