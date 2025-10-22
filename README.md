@@ -1,4 +1,18 @@
-<h1 align="center">Raphael Guerra</h1>
+# Raphael Guerra
+
+Last updated: 2025-10-22
+
+## Table of Contents
+
+<!-- TOC start -->
+- [👋 About Me](#about-me)
+- [📈 Contributions Fun](#contributions-fun)
+- [🏗️ Featured Projects](#featured-projects)
+- [🛠️ Tech & Tools](#tech-tools)
+- [🔗 Other Sites](#other-sites)
+- [📫 Connect](#connect)
+<!-- TOC end -->
+
 <p align="center">
 ERP & AI Hobbyist<br/>
 Automation-first workflows · Clean UIs · Practical reliability
@@ -25,23 +39,23 @@ Product-minded: simple apps that solve one problem well
 
 ## 🏗️ Featured Projects
 
-- **[ledger](https://github.com/RaphaelGuerra/ledger)**  
+- **[ledger](https://github.com/RaphaelGuerra/ledger)**
   *JavaScript* — Mini-ERP “Cash Ledger”: daily/monthly entries, Excel import, reconciliation flags.
 
-- **[pos](https://github.com/RaphaelGuerra/pos)**  
+- **[pos](https://github.com/RaphaelGuerra/pos)**
   *JavaScript* — Lightweight POS experiments that complement the ledger flow.
 
-- **[next-image-studio](https://github.com/RaphaelGuerra/next-image-studio)**  
+- **[next-image-studio](https://github.com/RaphaelGuerra/next-image-studio)**
   *TypeScript* — Next.js image utilities / studio; good sample of modern TS + React patterns.
 
-- **[txtRefine](https://github.com/RaphaelGuerra/txtRefine)**  
+- **[txtRefine](https://github.com/RaphaelGuerra/txtRefine)**
   *Python* — Text cleaning utilities; handy in ETL/LLM preprocessing pipelines.
 
-- **[transcriber](https://github.com/RaphaelGuerra/transcriber)**  
+- **[transcriber](https://github.com/RaphaelGuerra/transcriber)**
   *Python* — Audio → text transcription experiments; basis for OCR/LLM-adjacent tooling.
 
-- **[weight-tracker](https://github.com/RaphaelGuerra/weight-tracker)**  
-  *TypeScript (MIT)* — Minimal TS app with clean UI.  
+- **[weight-tracker](https://github.com/RaphaelGuerra/weight-tracker)**
+  *TypeScript (MIT)* — Minimal TS app with clean UI.
   <sub>Alt (backend/data focus): pin **[buffer](https://github.com/RaphaelGuerra/buffer)** (PL/SQL) or **[LFM-DB-Test](https://github.com/RaphaelGuerra/LFM-DB-Test)**.</sub>
 
 ---
