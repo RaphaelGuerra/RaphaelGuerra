@@ -23,10 +23,9 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 
 ## 👋 About Me
 
-I bridge **business ops** and **technical execution**. I build small, reliable
-tools and UIs that reduce manual effort and keep audit trails clean.
-
-Product-minded: simple apps that solve one problem well
+I bridge **business ops** and **engineering**: automation-first flows, clean
+UIs, and traceable data. I like small tools that remove manual steps, keep
+audit trails tidy, and stay easy to operate.
 
 ---
 
