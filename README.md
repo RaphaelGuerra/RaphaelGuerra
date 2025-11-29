@@ -22,10 +22,14 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 
 ## 👋 About Me
 
-I bridge **business ops** and **engineering**: automation-first flows, clean
-UIs, and traceable data. I also study philosophy and history; I like building
-small tools that remove manual steps, keep audit trails tidy, and stay easy to
-operate.
+I mix tech, philosophy, history, and neuroscience. I like understanding how
+people think, how systems break, and how ideas survive over time. Most of what
+I build is simple: small tools that kill manual steps, keep data clean, and make
+life easier for whoever’s on the other side.
+
+I’m always trying to connect things — business ops with engineering, old ideas
+with new tech, human behavior with system design. Automation, clarity, and
+clean execution are my thing.
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://linkedin.com/in/guerraraphael)
 [![Website](https://img.shields.io/badge/Website-111?logo=About.me&logoColor=white)](https://raphaelguerra.com)
