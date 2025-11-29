@@ -14,7 +14,6 @@ Live deployment: none (profile content only)
 
 <!-- TOC start -->
 - [👋 About Me](#-about-me)
-- [📈 Contributions Fun](#-contributions-fun)
 - [Featured Projects](#featured-projects)
 - [Tech & Tools](#tech--tools)
 - [🔗 Other Sites](#-other-sites)
@@ -36,8 +35,6 @@ tools and UIs that reduce manual effort and keep audit trails clean.
 Product-minded: simple apps that solve one problem well
 
 ---
-
-## 📈 Contributions Fun
 
 ## Featured Projects
 
