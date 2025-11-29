@@ -2,6 +2,7 @@
 
 [![Lint](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml)
 [![Security](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml)
+Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/snake-dark-neon.svg?v=2" />
@@ -18,13 +19,6 @@
 - [🔗 Other Sites](#-other-sites)
 - [📫 Connect](#-connect)
 <!-- TOC end -->
-
-<p align="center">
-ERP & AI Hobbyist<br/>
-Automation-first workflows · Clean UIs · Practical reliability
-</p>
-
----
 
 ## 👋 About Me
 
