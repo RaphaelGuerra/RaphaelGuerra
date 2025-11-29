@@ -24,8 +24,9 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 ## 👋 About Me
 
 I bridge **business ops** and **engineering**: automation-first flows, clean
-UIs, and traceable data. I like small tools that remove manual steps, keep
-audit trails tidy, and stay easy to operate.
+UIs, and traceable data. I also study philosophy and history; I like building
+small tools that remove manual steps, keep audit trails tidy, and stay easy to
+operate. More on LinkedIn: https://linkedin.com/in/guerraraphael
 
 ---
 
