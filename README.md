@@ -4,9 +4,9 @@
 [![Security](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/snake-dark.svg" />
-  <source media="(prefers-color-scheme: light)" srcset="assets/snake.svg" />
-  <img alt="Contribution snake" src="assets/snake.svg" />
+  <source media="(prefers-color-scheme: dark)" srcset="assets/snake-dark-neon.svg?v=2" />
+  <source media="(prefers-color-scheme: light)" srcset="assets/snake-neon.svg?v=2" />
+  <img alt="Contribution snake" src="assets/snake-neon.svg?v=2" />
 </picture>
 
 ## Table of Contents
