@@ -2,7 +2,6 @@
 
 [![Lint](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml)
 [![Security](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml)
-Live deployment: none (profile content only)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/snake-dark.svg" />
