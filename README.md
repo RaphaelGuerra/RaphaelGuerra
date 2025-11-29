@@ -1,5 +1,8 @@
 # Raphael Guerra
 
+[![Lint](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml)
+[![Security](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml)
+
 ## Table of Contents
 
 <!-- TOC start -->
