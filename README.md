@@ -18,7 +18,6 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 - [Featured Projects](#featured-projects)
 - [Tech & Tools](#tech--tools)
 - [🔗 Other Sites](#-other-sites)
-- [📫 Connect](#-connect)
 <!-- TOC end -->
 
 ## 👋 About Me
@@ -26,7 +25,10 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 I bridge **business ops** and **engineering**: automation-first flows, clean
 UIs, and traceable data. I also study philosophy and history; I like building
 small tools that remove manual steps, keep audit trails tidy, and stay easy to
-operate. More on LinkedIn: https://linkedin.com/in/guerraraphael
+operate.
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://linkedin.com/in/guerraraphael)
+[![Website](https://img.shields.io/badge/Website-111?logo=About.me&logoColor=white)](https://raphaelguerra.com)
 
 ---
 
@@ -67,13 +69,3 @@ operate. More on LinkedIn: https://linkedin.com/in/guerraraphael
 - **[raphaelguerra.com](https://github.com/RaphaelGuerra/raphaelguerra.com)** — personal site (source)
 - **[Phaelix website](https://github.com/RaphaelGuerra/phaelix-website)** — product site scaffolding
 - **Eco Explorer**: [app](https://github.com/RaphaelGuerra/eco-explorer) • [website](https://github.com/RaphaelGuerra/eco-explorer-website)
-
----
-
-## 📫 Connect
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://linkedin.com/in/guerraraphael)
-[![Website](https://img.shields.io/badge/Website-111?logo=About.me&logoColor=white)](https://raphaelguerra.com)
-
-<!-- Optional: visitors counter (you can remove if you prefer a cleaner footer) -->
-<!-- ![Visitors](https://visitor-badge.laobi.icu/badge?page_id=RaphaelGuerra) -->
