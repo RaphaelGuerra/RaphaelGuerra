@@ -10,11 +10,17 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: snake-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Use the non-Docker variant:
       - name: Generate snake (SVG only)
@@ -35,3 +41,11 @@ jobs:
           git add assets/
           git commit -m "chore: update snake" || echo "no changes"
           git push
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: snake-assets
+          path: |
+            dist/github-snake.svg
+            dist/github-snake-dark.svg
