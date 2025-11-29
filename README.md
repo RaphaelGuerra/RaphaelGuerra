@@ -1,14 +1,12 @@
 # Raphael Guerra
 
-Last updated: 2025-11-29
-
 ## Table of Contents
 
 <!-- TOC start -->
 - [👋 About Me](#about-me)
 - [📈 Contributions Fun](#contributions-fun)
 - [🏗️ Featured Projects](#featured-projects)
-- [🛠️ Tech & Tools](#tech-tools)
+- [🛠️ Tech & Tools](#tech--tools)
 - [🔗 Other Sites](#other-sites)
 - [📫 Connect](#connect)
 <!-- TOC end -->
