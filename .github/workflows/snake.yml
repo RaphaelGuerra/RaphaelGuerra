@@ -27,11 +27,11 @@ jobs:
         uses: Platane/snk/svg-only@v3
         with:
           github_user_name: ${{ github.repository_owner }}
-          color_snake: "#ff006e"
-          color_dots: "#8bd3e6,#f4d35e,#ee964b,#9d4edd,#2a9d8f,#ffca3a,#ff9f1c,#2ec4b6,#e76f51"
+          color_snake: "#39ff14"
+          color_dots: "#39ff14,#00f0ff,#ff00e1,#fffb00,#ff6b6b,#00ff9d,#7af9ff,#f72585,#a1ff0a,#00d9ff,#ff36c7,#fcca46"
           outputs: |
-            dist/github-snake.svg
-            dist/github-snake-dark.svg?palette=github-dark
+            dist/github-snake.svg?size=900x220
+            dist/github-snake-dark.svg?palette=github-dark&size=900x220
 
       - name: Commit files
         run: |
