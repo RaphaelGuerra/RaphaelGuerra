@@ -6,12 +6,12 @@
 ## Table of Contents
 
 <!-- TOC start -->
-- [👋 About Me](#about-me)
-- [📈 Contributions Fun](#contributions-fun)
-- [🏗️ Featured Projects](#featured-projects)
-- [🛠️ Tech & Tools](#tech--tools)
-- [🔗 Other Sites](#other-sites)
-- [📫 Connect](#connect)
+- [👋 About Me](#-about-me)
+- [📈 Contributions Fun](#-contributions-fun)
+- [Featured Projects](#featured-projects)
+- [Tech & Tools](#tech--tools)
+- [🔗 Other Sites](#-other-sites)
+- [📫 Connect](#-connect)
 <!-- TOC end -->
 
 <p align="center">
@@ -22,7 +22,9 @@ Automation-first workflows · Clean UIs · Practical reliability
 ---
 
 ## 👋 About Me
-I bridge **business ops** and **technical execution**. I build small, reliable tools and UIs that reduce manual effort and keep audit trails clean.
+
+I bridge **business ops** and **technical execution**. I build small, reliable
+tools and UIs that reduce manual effort and keep audit trails clean.
 
 Product-minded: simple apps that solve one problem well
 
@@ -38,22 +40,25 @@ Product-minded: simple apps that solve one problem well
 
 ---
 
-## 🏗️ Featured Projects
+## Featured Projects
 
 - **[ledger](https://github.com/RaphaelGuerra/ledger)**
-  *JavaScript* — Mini-ERP “Cash Ledger”: daily/monthly entries, Excel import, reconciliation flags.
+  *JavaScript* — Mini-ERP “Cash Ledger”: daily/monthly entries, Excel import,
+  reconciliation flags.
 
 - **[pos](https://github.com/RaphaelGuerra/pos)**
   *JavaScript* — Lightweight POS experiments that complement the ledger flow.
 
 - **[next-image-studio](https://github.com/RaphaelGuerra/next-image-studio)**
-  *TypeScript* — Next.js image utilities / studio; good sample of modern TS + React patterns.
+  *TypeScript* — Next.js image utilities / studio; good sample of modern TS +
+  React patterns.
 
 - **[txtRefine](https://github.com/RaphaelGuerra/txtRefine)**
   *Python* — Text cleaning utilities; handy in ETL/LLM preprocessing pipelines.
 
 - **[transcriber](https://github.com/RaphaelGuerra/transcriber)**
-  *Python* — Audio → text transcription experiments; basis for OCR/LLM-adjacent tooling.
+  *Python* — Audio → text transcription experiments; basis for OCR/LLM-adjacent
+  tooling.
 
 - **[weight-tracker](https://github.com/RaphaelGuerra/weight-tracker)**
   *TypeScript (MIT)* — Minimal TS app with clean UI.
@@ -61,7 +66,7 @@ Product-minded: simple apps that solve one problem well
 
 ---
 
-## 🛠️ Tech & Tools
+## Tech & Tools
 
 `REST / SOAP APIs` · `React` · `TypeScript` · `Python` · `GitHub Actions` · `Playwright` · `Docker (dev)` · `SQL / PL/SQL`
 
