@@ -1,4 +1,5 @@
 # Raphael Guerra
+
 Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 
 [![Lint](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml)
