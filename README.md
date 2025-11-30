@@ -1,14 +1,4 @@
 # Raphael Guerra
-
-## Table of Contents
-
-<!-- TOC start -->
-- [About Me](#about-me)
-- [Featured Projects](#featured-projects)
-- [Tech & Tools](#tech--tools)
-- [Other Sites](#other-sites)
-<!-- TOC end -->
-
 Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 
 [![Lint](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml)
@@ -19,6 +9,15 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
   <source media="(prefers-color-scheme: light)" srcset="assets/snake-neon.svg?v=2" />
   <img alt="Contribution snake" src="assets/snake-neon.svg?v=2" />
 </picture>
+
+## Table of Contents
+
+<!-- TOC start -->
+- [About Me](#about-me)
+- [Featured Projects](#featured-projects)
+- [Tech & Tools](#tech--tools)
+- [Other Sites](#other-sites)
+<!-- TOC end -->
 
 ## About Me
 
