@@ -3,10 +3,10 @@
 ## Table of Contents
 
 <!-- TOC start -->
-- [👋 About Me](#about-me)
+- [About Me](#about-me)
 - [Featured Projects](#featured-projects)
 - [Tech & Tools](#tech--tools)
-- [🔗 Other Sites](#other-sites)
+- [Other Sites](#other-sites)
 <!-- TOC end -->
 
 Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
@@ -20,10 +20,9 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
   <img alt="Contribution snake" src="assets/snake-neon.svg?v=2" />
 </picture>
 
+## About Me
 
-## 👋 About Me
-
-I mix tech, philosophy, history, and neuroscience. I like understanding how
+👋 I mix tech, philosophy, history, and neuroscience. I like understanding how
 people think, how systems break, and how ideas survive over time. Most of what
 I build is simple: small tools that kill manual steps, keep data clean, and make
 life easier for whoever’s on the other side.
@@ -69,7 +68,7 @@ clean execution are my thing.
 
 ---
 
-## 🔗 Other Sites
+## Other Sites
 
 - **[raphaelguerra.com](https://github.com/RaphaelGuerra/raphaelguerra.com)** — personal site (source)
 - **[Phaelix website](https://github.com/RaphaelGuerra/phaelix-website)** — product site scaffolding
