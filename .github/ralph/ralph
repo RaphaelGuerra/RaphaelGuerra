@@ -111,6 +111,8 @@ ensure_state_files() {
 
   local goal="$dir/GOAL.md"
   local progress="$dir/PROGRESS.md"
+  local instructions="$dir/INSTRUCTIONS.md"
+  local todo="$dir/TODO.md"
 
   if [[ ! -f "$goal" ]]; then
     cat <<'EOF' > "$goal"
@@ -123,6 +125,24 @@ EOF
     cat <<'EOF' > "$progress"
 NOT_STARTED
 Add progress notes here.
+EOF
+  fi
+
+  if [[ ! -f "$instructions" ]]; then
+    cat <<'EOF' > "$instructions"
+# Ralph Instructions
+- Work on exactly one TODO item per iteration.
+- Keep changes small and verifiable.
+- Run relevant tests if feasible; otherwise note "not run".
+- Update TODO.md and PROGRESS.md every loop.
+EOF
+  fi
+
+  if [[ ! -f "$todo" ]]; then
+    cat <<'EOF' > "$todo"
+# TODO
+- [ ] TASK: Break down GOAL.md into 3-7 concrete tasks in this file.
+- [ ] ALL_TASKS_COMPLETE
 EOF
   fi
 
@@ -150,11 +170,31 @@ write_blocked() {
   mv "$tmp" "$progress_file"
 }
 
+write_done() {
+  local progress_file="$1"
+  local tmp="${progress_file}.tmp"
+
+  {
+    echo "DONE"
+    if [[ -f "$progress_file" ]]; then
+      tail -n +2 "$progress_file" || true
+    fi
+  } > "$tmp"
+
+  mv "$tmp" "$progress_file"
+}
+
+todo_is_done() {
+  local todo_file="$1"
+  [[ -f "$todo_file" ]] && grep -qE "\\[x\\] ALL_TASKS_COMPLETE" "$todo_file"
+}
+
 build_prompt() {
   local project_abs="$1"
   local state_dir="$2"
   local iter="$3"
   local max_iters="$4"
+  local instructions_file="$5"
 
   cat <<EOF
 You are running the Ralph development loop.
@@ -164,10 +204,13 @@ State directory: $state_dir
 Iteration: $iter of $max_iters
 
 Required steps:
-1) Read "$state_dir/GOAL.md" and "$state_dir/PROGRESS.md".
+1) Read "$state_dir/GOAL.md", "$state_dir/PROGRESS.md", and "$state_dir/TODO.md".
 2) If the goal is missing or unclear, update PROGRESS.md with BLOCKED as the first line and explain what is needed. Then stop.
-3) Make ONE small, safe improvement toward the goal.
-4) Update "$state_dir/PROGRESS.md":
+3) If TODO.md contains the placeholder task, replace TODO.md with 3-7 concrete tasks derived from the goal. Mark only one task complete in this iteration.
+4) Otherwise, pick exactly ONE unchecked task from TODO.md and complete it.
+5) Update "$state_dir/TODO.md" to check off the task you completed.
+6) If all tasks are complete, mark "- [x] ALL_TASKS_COMPLETE".
+7) Update "$state_dir/PROGRESS.md":
    - First line: DONE if the goal is achieved, BLOCKED if you need user input, otherwise IN_PROGRESS.
    - Include a short bullet list: changes made, tests run (or "not run"), and next steps.
 
@@ -178,6 +221,12 @@ Safety rules (must follow):
 - Do not ask for user input; run autonomously.
 - Only modify files within the project directory and "$state_dir".
 EOF
+
+  if [[ -f "$instructions_file" ]]; then
+    echo ""
+    echo "Project instructions (from $instructions_file):"
+    cat "$instructions_file"
+  fi
 }
 
 list_projects() {
@@ -256,10 +305,18 @@ run_loop() {
   state_dir="$(ensure_state_files "$project_abs")"
   local goal_file="$state_dir/GOAL.md"
   local progress_file="$state_dir/PROGRESS.md"
+  local instructions_file="$state_dir/INSTRUCTIONS.md"
+  local todo_file="$state_dir/TODO.md"
 
   if goal_needs_setup "$goal_file"; then
     write_blocked "$progress_file" "Set a clear goal in $goal_file (use: ralph goal <project>)."
     echo "BLOCKED: $project_abs (goal not set)"
+    return 0
+  fi
+
+  if todo_is_done "$todo_file"; then
+    write_done "$progress_file"
+    echo "DONE: $project_abs"
     return 0
   fi
 
@@ -287,13 +344,13 @@ run_loop() {
     set +e
     local prompt_file="$state_dir/ralph_prompt.txt"
     local last_message="$state_dir/last_message.txt"
-    build_prompt "$project_abs" "$state_dir" "$i" "$max_iters" > "$prompt_file"
+    build_prompt "$project_abs" "$state_dir" "$i" "$max_iters" "$instructions_file" > "$prompt_file"
     codex exec \
       --cd "$project_abs" \
       --add-dir "$state_dir" \
       --skip-git-repo-check \
       -s workspace-write \
-      -c ask_for_approval=never \
+      -a never \
       --output-last-message "$last_message" \
       - < "$prompt_file"
     local status=$?
@@ -312,6 +369,12 @@ run_loop() {
     fi
     if [[ "$line" == "BLOCKED" ]]; then
       echo "BLOCKED: $project_abs"
+      return 0
+    fi
+
+    if todo_is_done "$todo_file"; then
+      write_done "$progress_file"
+      echo "DONE: $project_abs"
       return 0
     fi
   done
