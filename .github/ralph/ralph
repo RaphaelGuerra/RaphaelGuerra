@@ -13,6 +13,8 @@ RALPH_AUTO_COMMIT="${RALPH_AUTO_COMMIT:-1}"
 RALPH_AUTO_PUSH="${RALPH_AUTO_PUSH:-1}"
 RALPH_GIT_REMOTE="${RALPH_GIT_REMOTE:-origin}"
 RALPH_GIT_BRANCH="${RALPH_GIT_BRANCH:-}"
+RUN_AUTO_COMMIT="$RALPH_AUTO_COMMIT"
+RUN_AUTO_PUSH="$RALPH_AUTO_PUSH"
 
 if [[ ! "$MAX_ITERS" =~ ^[0-9]+$ ]] || [[ "$MAX_ITERS" -lt 1 ]]; then
   MAX_ITERS="$MAX_ITERS_DEFAULT"
@@ -24,10 +26,10 @@ ralph: development loop runner for projects under ~/dev
 
 Usage:
   ralph pick
-  ralph run <project>
+  ralph run [--no-commit] [--no-push] <project>
   ralph goal <project>
   ralph progress <project>
-  ralph all
+  ralph all [--no-commit] [--no-push]
 
 Environment:
   DEV_DIR    Override the default projects directory (default: ~/dev)
@@ -62,6 +64,19 @@ is_true() {
     1|true|True|TRUE|yes|Yes|YES|on|On|ON) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+format_elapsed() {
+  local total="$1"
+  local hours=$((total / 3600))
+  local mins=$(((total % 3600) / 60))
+  local secs=$((total % 60))
+
+  if (( hours > 0 )); then
+    printf '%02d:%02d:%02d' "$hours" "$mins" "$secs"
+  else
+    printf '%02d:%02d' "$mins" "$secs"
+  fi
 }
 
 goal_needs_setup() {
@@ -198,6 +213,156 @@ extract_section() {
   ' "$file"
 }
 
+run_codex_json() {
+  local status_prefix="$1"
+  local log_mode="$2"
+  local log_file="$3"
+  local usage_file="$4"
+  shift 4
+
+  python3 -u - "$status_prefix" "$log_mode" "$log_file" "$usage_file" "$@" <<'PY'
+import json
+import sys
+import time
+import threading
+import subprocess
+
+status_prefix = sys.argv[1]
+log_mode = sys.argv[2]
+log_file = sys.argv[3]
+usage_file = sys.argv[4]
+cmd = sys.argv[5:]
+
+log_enabled = log_mode in ("log", "log_only")
+show_output = log_mode in ("stream", "log")
+show_status = log_mode != "quiet"
+
+usage = {"input_tokens": None, "cached_input_tokens": None, "output_tokens": None}
+usage_lock = threading.Lock()
+stop_event = threading.Event()
+status_line = ""
+
+def format_elapsed(total):
+    hours = total // 3600
+    mins = (total % 3600) // 60
+    secs = total % 60
+    if hours > 0:
+        return f"{hours:02d}:{mins:02d}:{secs:02d}"
+    return f"{mins:02d}:{secs:02d}"
+
+def build_status(elapsed):
+    with usage_lock:
+        if usage["input_tokens"] is None:
+            in_tokens = "?"
+            cached = "?"
+            out_tokens = "?"
+        else:
+            in_tokens = str(usage["input_tokens"])
+            cached = str(usage["cached_input_tokens"])
+            out_tokens = str(usage["output_tokens"])
+    return f"{status_prefix} | elapsed {format_elapsed(elapsed)} | in {in_tokens} (cached {cached}) out {out_tokens}"
+
+def clear_status():
+    global status_line
+    if not show_status:
+        return
+    sys.stderr.write("\r" + (" " * len(status_line)) + "\r")
+    sys.stderr.flush()
+
+def ticker(start_time):
+    global status_line
+    while not stop_event.is_set():
+        elapsed = int(time.monotonic() - start_time)
+        status_line = build_status(elapsed)
+        if show_status:
+            sys.stderr.write("\r" + status_line)
+            sys.stderr.flush()
+        time.sleep(1)
+
+log_fh = open(log_file, "a", encoding="utf-8") if log_enabled and log_file else None
+
+proc = subprocess.Popen(
+    cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+    bufsize=1,
+)
+
+start_time = time.monotonic()
+tick_thread = threading.Thread(target=ticker, args=(start_time,), daemon=True)
+tick_thread.start()
+
+def pump_stderr():
+    for line in proc.stderr:
+        if log_fh:
+            log_fh.write(line)
+        if show_status:
+            clear_status()
+        sys.stderr.write(line)
+        sys.stderr.flush()
+
+err_thread = threading.Thread(target=pump_stderr, daemon=True)
+err_thread.start()
+
+for raw in proc.stdout:
+    if log_fh:
+        log_fh.write(raw)
+    line = raw.strip("\n")
+    if not line:
+        continue
+    try:
+        obj = json.loads(line)
+    except json.JSONDecodeError:
+        if show_output:
+            if show_status:
+                clear_status()
+            sys.stdout.write(line + "\n")
+            sys.stdout.flush()
+        continue
+
+    if obj.get("type") == "turn.completed":
+        usage_obj = obj.get("usage") or {}
+        with usage_lock:
+            usage["input_tokens"] = usage_obj.get("input_tokens", 0)
+            usage["cached_input_tokens"] = usage_obj.get("cached_input_tokens", 0)
+            usage["output_tokens"] = usage_obj.get("output_tokens", 0)
+
+    if show_output:
+        item = obj.get("item")
+        if isinstance(item, dict) and item.get("text"):
+            if show_status:
+                clear_status()
+            sys.stdout.write(item["text"] + "\n")
+            sys.stdout.flush()
+
+proc.wait()
+stop_event.set()
+tick_thread.join(timeout=2)
+err_thread.join(timeout=2)
+
+if show_status:
+    clear_status()
+    final_line = build_status(int(time.monotonic() - start_time))
+    sys.stderr.write(final_line + "\n")
+    sys.stderr.flush()
+
+with open(usage_file, "w", encoding="utf-8") as fh:
+    with usage_lock:
+        out = {
+            "input_tokens": usage["input_tokens"] or 0,
+            "cached_input_tokens": usage["cached_input_tokens"] or 0,
+            "output_tokens": usage["output_tokens"] or 0,
+        }
+    fh.write(json.dumps(out))
+
+if log_fh:
+    log_fh.close()
+
+sys.exit(proc.returncode)
+PY
+}
+
 write_blocked() {
   local progress_file="$1"
   local reason="$2"
@@ -240,7 +405,7 @@ auto_commit_and_push() {
   local iter="$3"
   local progress_file="$state_dir/PROGRESS.md"
 
-  if ! is_true "$RALPH_AUTO_COMMIT"; then
+  if ! is_true "$RUN_AUTO_COMMIT"; then
     return 0
   fi
 
@@ -299,8 +464,9 @@ auto_commit_and_push() {
     commit_args+=("-m" "$line")
   done
   git -C "$project_abs" commit "${commit_args[@]}"
+  printf '%s %s\n' "$(git -C "$project_abs" rev-parse --short HEAD)" "$(git -C "$project_abs" log -1 --pretty=%s)" > "$state_dir/last_commit.txt"
 
-  if is_true "$RALPH_AUTO_PUSH"; then
+  if is_true "$RUN_AUTO_PUSH"; then
     local remote="$RALPH_GIT_REMOTE"
     local branch="$RALPH_GIT_BRANCH"
     if [[ -z "$branch" ]]; then
@@ -430,7 +596,7 @@ pick_project() {
   IFS=$'\n\t'
 
   printf 'Select a project under %s:\n' "$DEV_DIR_ABS" >&2
-  local i
+  local i=0
   for ((i=0; i<${#projects[@]}; i++)); do
     local rel="${projects[$i]#"$DEV_DIR_ABS"/}"
     if [[ "$rel" == "${projects[$i]}" ]]; then
@@ -455,6 +621,16 @@ pick_project() {
 run_loop() {
   local project_input="$1"
   local max_iters="$2"
+  local start_epoch
+  start_epoch="$(date +%s)"
+  local total_in=0
+  local total_cached=0
+  local total_out=0
+  local last_commit=""
+  local stop_reason=""
+  local stop_detail=""
+  local exit_code=0
+  local skip_loop=0
 
   ensure_dev_dir
   ensure_state_root
@@ -473,14 +649,29 @@ run_loop() {
 
   if goal_needs_setup "$goal_file"; then
     write_blocked "$progress_file" "Set a clear goal in $goal_file (use: ralph goal <project>)."
-    echo "BLOCKED: $project_abs (goal not set)"
-    return 0
+    stop_reason="BLOCKED"
+    stop_detail="goal not set"
+    skip_loop=1
   fi
 
-  if todo_is_done "$todo_file"; then
-    write_done "$progress_file"
-    echo "DONE: $project_abs"
-    return 0
+  if [[ $skip_loop -eq 0 ]]; then
+    if is_true "$RUN_AUTO_COMMIT" && git -C "$project_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      if [[ -n "$(git -C "$project_abs" status --porcelain)" ]]; then
+        write_blocked "$progress_file" "Working tree not clean. Commit or stash changes, or run with --no-commit."
+        stop_reason="BLOCKED"
+        stop_detail="dirty working tree"
+        skip_loop=1
+      fi
+    fi
+  fi
+
+  if [[ $skip_loop -eq 0 ]]; then
+    if todo_is_done "$todo_file"; then
+      write_done "$progress_file"
+      stop_reason="DONE"
+      stop_detail="all tasks complete"
+      skip_loop=1
+    fi
   fi
 
   case "$log_mode" in
@@ -493,90 +684,144 @@ run_loop() {
   fi
 
   local i
-  for ((i=1; i<=max_iters; i++)); do
-    local line
-    line="$(first_line "$progress_file")"
+  if [[ $skip_loop -eq 0 ]]; then
+    for ((i=1; i<=max_iters; i++)); do
+      local line
+      line="$(first_line "$progress_file")"
 
-    if [[ "$line" == "DONE" ]]; then
-      echo "DONE: $project_abs"
-      return 0
-    fi
-    if [[ "$line" == "BLOCKED" ]]; then
-      echo "BLOCKED: $project_abs"
-      return 0
-    fi
+      if [[ "$line" == "DONE" ]]; then
+        stop_reason="DONE"
+        stop_detail="progress marked done"
+        break
+      fi
+      if [[ "$line" == "BLOCKED" ]]; then
+        stop_reason="BLOCKED"
+        stop_detail="progress blocked"
+        break
+      fi
 
-    if ! command -v codex >/dev/null 2>&1; then
-      write_blocked "$progress_file" "codex not found in PATH. Install Codex CLI and retry."
-      echo "BLOCKED: $project_abs (codex not found)"
-      return 1
-    fi
+      if ! command -v codex >/dev/null 2>&1; then
+        write_blocked "$progress_file" "codex not found in PATH. Install Codex CLI and retry."
+        stop_reason="BLOCKED"
+        stop_detail="codex not found"
+        exit_code=1
+        break
+      fi
 
-    echo "Running codex ($i/$max_iters) in $project_abs"
-    set +e
-    local prompt_file="$state_dir/ralph_prompt.txt"
-    local last_message="$state_dir/last_message.txt"
-    local ts
-    local log_file
-    ts="$(date +%Y%m%d-%H%M%S)"
-    log_file="$log_dir/iter-${i}-${ts}.log"
-    build_prompt "$project_abs" "$state_dir" "$i" "$max_iters" "$instructions_file" > "$prompt_file"
-    run_codex() {
-      codex exec \
-        --cd "$project_abs" \
-        --add-dir "$state_dir" \
-        --skip-git-repo-check \
-        -s workspace-write \
-        -a never \
-        --output-last-message "$last_message" \
-        - < "$prompt_file"
-    }
-    case "$log_mode" in
-      stream)
-        run_codex
-        ;;
-      quiet)
-        run_codex >/dev/null 2>&1
-        ;;
-      log)
+      echo "Running codex ($i/$max_iters) in $project_abs"
+      set +e
+      local prompt_file="$state_dir/ralph_prompt.txt"
+      local last_message="$state_dir/last_message.txt"
+      local ts
+      local log_file
+      ts="$(date +%Y%m%d-%H%M%S)"
+      log_file="$log_dir/iter-${i}-${ts}.log"
+      local usage_file="$state_dir/usage-iter-${i}.json"
+      build_prompt "$project_abs" "$state_dir" "$i" "$max_iters" "$instructions_file" > "$prompt_file"
+      if [[ "$log_mode" == "log" || "$log_mode" == "log_only" ]]; then
         mkdir -p "$log_dir"
-        run_codex 2>&1 | tee "$log_file"
-        ;;
-      log_only)
-        mkdir -p "$log_dir"
-        run_codex >"$log_file" 2>&1
-        ;;
-    esac
-    local status=$?
-    set -e
+      fi
+      run_codex_json \
+        "Iter $i/$max_iters" \
+        "$log_mode" \
+        "$log_file" \
+        "$usage_file" \
+        codex exec \
+          --json \
+          --cd "$project_abs" \
+          --add-dir "$state_dir" \
+          --skip-git-repo-check \
+          -s workspace-write \
+          -a never \
+          --output-last-message "$last_message" \
+          - < "$prompt_file"
+      local status=$?
+      set -e
 
-    if [[ $status -ne 0 ]]; then
-      write_blocked "$progress_file" "codex exited with status $status. Resolve the error and rerun."
-      echo "BLOCKED: $project_abs (codex exit $status)"
-      return $status
-    fi
+      if [[ $status -ne 0 ]]; then
+        write_blocked "$progress_file" "codex exited with status $status. Resolve the error and rerun."
+        stop_reason="ERROR"
+        stop_detail="codex exit $status"
+        exit_code=$status
+        break
+      fi
 
-    if ! auto_commit_and_push "$project_abs" "$state_dir" "$i"; then
-      echo "BLOCKED: $project_abs (auto-commit/push failed)"
-      return 1
-    fi
+      if [[ -f "$usage_file" ]]; then
+        read -r iter_in iter_cached iter_out < <(python3 - <<'PY'
+import json
+import sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    data = json.load(fh)
+print(f"{data.get('input_tokens', 0)} {data.get('cached_input_tokens', 0)} {data.get('output_tokens', 0)}")
+PY
+"$usage_file")
+        total_in=$((total_in + iter_in))
+        total_cached=$((total_cached + iter_cached))
+        total_out=$((total_out + iter_out))
+      fi
 
-    line="$(first_line "$progress_file")"
-    if [[ "$line" == "DONE" ]]; then
-      echo "DONE: $project_abs"
-      return 0
-    fi
-    if [[ "$line" == "BLOCKED" ]]; then
-      echo "BLOCKED: $project_abs"
-      return 0
-    fi
+      if ! auto_commit_and_push "$project_abs" "$state_dir" "$i"; then
+        stop_reason="BLOCKED"
+        stop_detail="auto-commit/push failed"
+        exit_code=1
+        break
+      fi
 
-    if todo_is_done "$todo_file"; then
-      write_done "$progress_file"
-      echo "DONE: $project_abs"
-      return 0
+      if [[ -f "$state_dir/last_commit.txt" ]]; then
+        last_commit="$(cat "$state_dir/last_commit.txt")"
+      fi
+
+      line="$(first_line "$progress_file")"
+      if [[ "$line" == "DONE" ]]; then
+        stop_reason="DONE"
+        stop_detail="progress marked done"
+        break
+      fi
+      if [[ "$line" == "BLOCKED" ]]; then
+        stop_reason="BLOCKED"
+        stop_detail="progress blocked"
+        break
+      fi
+
+      if todo_is_done "$todo_file"; then
+        write_done "$progress_file"
+        stop_reason="DONE"
+        stop_detail="all tasks complete"
+        break
+      fi
+    done
+  fi
+
+  if [[ -z "$stop_reason" && $i -ge $max_iters ]]; then
+    stop_reason="MAX_ITERS"
+    stop_detail="max iterations reached"
+  fi
+
+  local end_epoch
+  end_epoch="$(date +%s)"
+  local elapsed
+  elapsed="$((end_epoch - start_epoch))"
+  local detail_line="$stop_detail"
+  if [[ "$stop_reason" == "BLOCKED" ]]; then
+    local blocked_reason
+    blocked_reason="$(sed -n '2p' "$progress_file" 2>/dev/null || true)"
+    if [[ -n "$blocked_reason" ]]; then
+      detail_line="$blocked_reason"
     fi
-  done
+  fi
+
+  echo "Result: $stop_reason"
+  if [[ -n "$detail_line" ]]; then
+    echo "Reason: $detail_line"
+  fi
+  echo "Elapsed: $(format_elapsed "$elapsed")"
+  echo "Tokens: in $total_in (cached $total_cached) out $total_out"
+  if [[ -n "$last_commit" ]]; then
+    echo "Last commit: $last_commit"
+  fi
+
+  return "$exit_code"
 }
 
 cmd_goal() {
@@ -659,10 +904,51 @@ main() {
       pick_project
       ;;
     run)
-      if [[ $# -ne 2 ]]; then
-        die "Usage: ralph run <project>"
+      shift
+      local project=""
+      local arg
+      RUN_AUTO_COMMIT="$RALPH_AUTO_COMMIT"
+      RUN_AUTO_PUSH="$RALPH_AUTO_PUSH"
+      while [[ $# -gt 0 ]]; do
+        arg="$1"
+        case "$arg" in
+          --no-commit)
+            RUN_AUTO_COMMIT=0
+            shift
+            ;;
+          --no-push)
+            RUN_AUTO_PUSH=0
+            shift
+            ;;
+          --)
+            shift
+            break
+            ;;
+          --*)
+            die "Unknown flag: $arg"
+            ;;
+          *)
+            if [[ -z "$project" ]]; then
+              project="$arg"
+              shift
+            else
+              die "Unexpected argument: $arg"
+            fi
+            ;;
+        esac
+      done
+      if [[ $# -gt 0 ]]; then
+        if [[ -z "$project" ]]; then
+          project="$1"
+          shift
+        else
+          die "Unexpected argument: $*"
+        fi
       fi
-      run_loop "$2" "$MAX_ITERS"
+      if [[ -z "$project" ]]; then
+        die "Usage: ralph run [--no-commit] [--no-push] <project>"
+      fi
+      run_loop "$project" "$MAX_ITERS"
       ;;
     goal)
       if [[ $# -ne 2 ]]; then
@@ -677,6 +963,31 @@ main() {
       cmd_progress "$2"
       ;;
     all)
+      shift
+      RUN_AUTO_COMMIT="$RALPH_AUTO_COMMIT"
+      RUN_AUTO_PUSH="$RALPH_AUTO_PUSH"
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --no-commit)
+            RUN_AUTO_COMMIT=0
+            shift
+            ;;
+          --no-push)
+            RUN_AUTO_PUSH=0
+            shift
+            ;;
+          --)
+            shift
+            break
+            ;;
+          --*)
+            die "Unknown flag: $1"
+            ;;
+          *)
+            die "Unexpected argument: $1"
+            ;;
+        esac
+      done
       cmd_all
       ;;
     *)
