@@ -188,6 +188,43 @@ first_line() {
   head -n 1 "$1" 2>/dev/null || true
 }
 
+auto_unblock_if_clean() {
+  local project_abs="$1"
+  local progress_file="$2"
+  local line
+  line="$(first_line "$progress_file")"
+  if [[ "$line" != "BLOCKED" ]]; then
+    return 0
+  fi
+
+  local reason
+  reason="$(sed -n '2p' "$progress_file" 2>/dev/null || true)"
+  if [[ "$reason" != *"Working tree not clean"* ]]; then
+    return 0
+  fi
+
+  if ! git -C "$project_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    return 0
+  fi
+  if [[ -n "$(git -C "$project_abs" status --porcelain)" ]]; then
+    return 0
+  fi
+
+  local ts
+  ts="$(date '+%Y-%m-%d %H:%M:%S')"
+  local tmp="${progress_file}.tmp"
+  {
+    echo "IN_PROGRESS"
+    echo "Auto-unblocked: repo clean at $ts"
+    echo ""
+    if [[ -f "$progress_file" ]]; then
+      tail -n +3 "$progress_file" || true
+    fi
+  } > "$tmp"
+
+  mv "$tmp" "$progress_file"
+}
+
 extract_field() {
   local label="$1"
   local file="$2"
@@ -646,6 +683,8 @@ run_loop() {
   local todo_file="$state_dir/TODO.md"
   local log_mode="$RALPH_LOG_MODE"
   local log_dir="$RALPH_LOG_DIR"
+
+  auto_unblock_if_clean "$project_abs" "$progress_file"
 
   if goal_needs_setup "$goal_file"; then
     write_blocked "$progress_file" "Set a clear goal in $goal_file (use: ralph goal <project>)."
