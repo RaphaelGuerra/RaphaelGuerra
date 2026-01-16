@@ -15,6 +15,8 @@ RALPH_GIT_REMOTE="${RALPH_GIT_REMOTE:-origin}"
 RALPH_GIT_BRANCH="${RALPH_GIT_BRANCH:-}"
 RUN_AUTO_COMMIT="$RALPH_AUTO_COMMIT"
 RUN_AUTO_PUSH="$RALPH_AUTO_PUSH"
+RALPH_LAST_NEW_COMMITS=0
+RALPH_LAST_PUSHED=0
 
 if [[ ! "$MAX_ITERS" =~ ^[0-9]+$ ]] || [[ "$MAX_ITERS" -lt 1 ]]; then
   MAX_ITERS="$MAX_ITERS_DEFAULT"
@@ -223,6 +225,16 @@ auto_unblock_if_clean() {
   } > "$tmp"
 
   mv "$tmp" "$progress_file"
+}
+
+count_new_commits() {
+  local project_abs="$1"
+  local base_sha="$2"
+  if [[ -z "$base_sha" ]]; then
+    git -C "$project_abs" rev-list --count HEAD 2>/dev/null || echo 0
+    return 0
+  fi
+  git -C "$project_abs" rev-list --count "${base_sha}..HEAD" 2>/dev/null || echo 0
 }
 
 extract_field() {
@@ -440,70 +452,79 @@ auto_commit_and_push() {
   local project_abs="$1"
   local state_dir="$2"
   local iter="$3"
+  local base_sha="$4"
   local progress_file="$state_dir/PROGRESS.md"
 
-  if ! is_true "$RUN_AUTO_COMMIT"; then
-    return 0
-  fi
+  RALPH_LAST_NEW_COMMITS=0
+  RALPH_LAST_PUSHED=0
 
   if ! git -C "$project_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     return 0
   fi
 
-  if [[ -z "$(git -C "$project_abs" status --porcelain)" ]]; then
-    return 0
+  local new_commits
+  new_commits="$(count_new_commits "$project_abs" "$base_sha")"
+
+  if is_true "$RUN_AUTO_COMMIT"; then
+    if [[ -z "$(git -C "$project_abs" status --porcelain)" ]]; then
+      :
+    else
+      local status_line
+      status_line="$(first_line "$progress_file")"
+      if [[ "$status_line" == "BLOCKED" ]]; then
+        return 0
+      fi
+
+      local commit_line task_line tests_line
+      commit_line="$(extract_field "Commit" "$progress_file")"
+      task_line="$(extract_field "Task" "$progress_file")"
+      tests_line="$(extract_field "Tests" "$progress_file")"
+
+      local subject
+      if [[ -n "$commit_line" ]]; then
+        subject="$commit_line"
+      elif [[ -n "$task_line" ]]; then
+        subject="$task_line"
+      else
+        subject="ralph: iteration ${iter}"
+      fi
+
+      git -C "$project_abs" add -A
+      if ! git -C "$project_abs" diff --cached --quiet; then
+        local body=()
+        if [[ -n "$task_line" && "$task_line" != "$subject" ]]; then
+          body+=("Task: $task_line")
+        fi
+        if [[ -n "$tests_line" ]]; then
+          body+=("Tests: $tests_line")
+        else
+          body+=("Tests: not run")
+        fi
+
+        local changes
+        changes="$(extract_section "Changes" "$progress_file")"
+        if [[ -n "$changes" ]]; then
+          body+=("Changes:" "$changes")
+        fi
+
+        local commit_args=("-m" "$subject")
+        local line
+        for line in "${body[@]}"; do
+          commit_args+=("-m" "$line")
+        done
+        git -C "$project_abs" commit "${commit_args[@]}"
+      fi
+    fi
   fi
 
-  local status_line
-  status_line="$(first_line "$progress_file")"
-  if [[ "$status_line" == "BLOCKED" ]]; then
-    return 0
+  new_commits="$(count_new_commits "$project_abs" "$base_sha")"
+  RALPH_LAST_NEW_COMMITS="$new_commits"
+
+  if [[ "$new_commits" -gt 0 ]]; then
+    printf '%s %s\n' "$(git -C "$project_abs" rev-parse --short HEAD)" "$(git -C "$project_abs" log -1 --pretty=%s)" > "$state_dir/last_commit.txt"
   fi
 
-  local commit_line task_line tests_line
-  commit_line="$(extract_field "Commit" "$progress_file")"
-  task_line="$(extract_field "Task" "$progress_file")"
-  tests_line="$(extract_field "Tests" "$progress_file")"
-
-  local subject
-  if [[ -n "$commit_line" ]]; then
-    subject="$commit_line"
-  elif [[ -n "$task_line" ]]; then
-    subject="$task_line"
-  else
-    subject="ralph: iteration ${iter}"
-  fi
-
-  git -C "$project_abs" add -A
-  if git -C "$project_abs" diff --cached --quiet; then
-    return 0
-  fi
-
-  local body=()
-  if [[ -n "$task_line" && "$task_line" != "$subject" ]]; then
-    body+=("Task: $task_line")
-  fi
-  if [[ -n "$tests_line" ]]; then
-    body+=("Tests: $tests_line")
-  else
-    body+=("Tests: not run")
-  fi
-
-  local changes
-  changes="$(extract_section "Changes" "$progress_file")"
-  if [[ -n "$changes" ]]; then
-    body+=("Changes:" "$changes")
-  fi
-
-  local commit_args=("-m" "$subject")
-  local line
-  for line in "${body[@]}"; do
-    commit_args+=("-m" "$line")
-  done
-  git -C "$project_abs" commit "${commit_args[@]}"
-  printf '%s %s\n' "$(git -C "$project_abs" rev-parse --short HEAD)" "$(git -C "$project_abs" log -1 --pretty=%s)" > "$state_dir/last_commit.txt"
-
-  if is_true "$RUN_AUTO_PUSH"; then
+  if is_true "$RUN_AUTO_PUSH" && [[ "$new_commits" -gt 0 ]]; then
     local remote="$RALPH_GIT_REMOTE"
     local branch="$RALPH_GIT_BRANCH"
     if [[ -z "$branch" ]]; then
@@ -513,6 +534,7 @@ auto_commit_and_push() {
       write_blocked "$progress_file" "git push failed for ${remote}/${branch}. Resolve and rerun."
       return 1
     fi
+    RALPH_LAST_PUSHED=1
   fi
 }
 
@@ -543,6 +565,10 @@ Required steps:
    - Changes: bullet list of changes made.
    - Tests: command(s) run or "not run".
    - Commit: one-line commit subject in imperative mood.
+
+Commit behavior:
+- Create small, meaningful commits as you go (micro-commits).
+- If you run tests, make a separate commit that mentions the test command and result.
 
 Safety rules (must follow):
 - Never read, print, or exfiltrate secrets.
@@ -663,6 +689,8 @@ run_loop() {
   local total_in=0
   local total_cached=0
   local total_out=0
+  local total_commits=0
+  local pushed_any=0
   local last_commit=""
   local stop_reason=""
   local stop_detail=""
@@ -756,6 +784,10 @@ run_loop() {
       ts="$(date +%Y%m%d-%H%M%S)"
       log_file="$log_dir/iter-${i}-${ts}.log"
       local usage_file="$state_dir/usage-iter-${i}.json"
+      local base_sha=""
+      if git -C "$project_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        base_sha="$(git -C "$project_abs" rev-parse HEAD 2>/dev/null || true)"
+      fi
       build_prompt "$project_abs" "$state_dir" "$i" "$max_iters" "$instructions_file" > "$prompt_file"
       if [[ "$log_mode" == "log" || "$log_mode" == "log_only" ]]; then
         mkdir -p "$log_dir"
@@ -800,11 +832,16 @@ PY
         total_out=$((total_out + iter_out))
       fi
 
-      if ! auto_commit_and_push "$project_abs" "$state_dir" "$i"; then
+      if ! auto_commit_and_push "$project_abs" "$state_dir" "$i" "$base_sha"; then
         stop_reason="BLOCKED"
         stop_detail="auto-commit/push failed"
         exit_code=1
         break
+      fi
+
+      total_commits=$((total_commits + RALPH_LAST_NEW_COMMITS))
+      if [[ "$RALPH_LAST_PUSHED" -eq 1 ]]; then
+        pushed_any=1
       fi
 
       if is_true "$RUN_AUTO_COMMIT" && git -C "$project_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -875,6 +912,14 @@ PY
   fi
   echo "Elapsed: $(format_elapsed "$elapsed")"
   echo "Tokens: in $total_in (cached $total_cached) out $total_out"
+  echo "Commits: $total_commits"
+  if is_true "$RUN_AUTO_PUSH"; then
+    if [[ "$pushed_any" -eq 1 ]]; then
+      echo "Pushed: yes"
+    else
+      echo "Pushed: no"
+    fi
+  fi
   echo "Repo clean: $clean_status"
   if [[ -n "$last_commit" ]]; then
     echo "Last commit: $last_commit"
