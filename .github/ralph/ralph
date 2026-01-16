@@ -768,6 +768,16 @@ PY
         break
       fi
 
+      if is_true "$RUN_AUTO_COMMIT" && git -C "$project_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        if [[ -n "$(git -C "$project_abs" status --porcelain)" ]]; then
+          write_blocked "$progress_file" "Working tree not clean after auto-commit. Resolve and rerun."
+          stop_reason="BLOCKED"
+          stop_detail="dirty working tree after auto-commit"
+          exit_code=1
+          break
+        fi
+      fi
+
       if [[ -f "$state_dir/last_commit.txt" ]]; then
         last_commit="$(cat "$state_dir/last_commit.txt")"
       fi
@@ -811,12 +821,22 @@ PY
     fi
   fi
 
+  local clean_status="unknown"
+  if git -C "$project_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if [[ -z "$(git -C "$project_abs" status --porcelain)" ]]; then
+      clean_status="yes"
+    else
+      clean_status="no"
+    fi
+  fi
+
   echo "Result: $stop_reason"
   if [[ -n "$detail_line" ]]; then
     echo "Reason: $detail_line"
   fi
   echo "Elapsed: $(format_elapsed "$elapsed")"
   echo "Tokens: in $total_in (cached $total_cached) out $total_out"
+  echo "Repo clean: $clean_status"
   if [[ -n "$last_commit" ]]; then
     echo "Last commit: $last_commit"
   fi
