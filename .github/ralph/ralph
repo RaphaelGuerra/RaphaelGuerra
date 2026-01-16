@@ -7,6 +7,8 @@ STATE_ROOT="$HOME/.ralph/state"
 MAX_ITERS_DEFAULT=6
 MAX_ITERS="${MAX_ITERS:-$MAX_ITERS_DEFAULT}"
 DEV_DIR_ABS=""
+RALPH_LOG_MODE="${RALPH_LOG_MODE:-stream}"
+RALPH_LOG_DIR="${RALPH_LOG_DIR:-}"
 
 if [[ ! "$MAX_ITERS" =~ ^[0-9]+$ ]] || [[ "$MAX_ITERS" -lt 1 ]]; then
   MAX_ITERS="$MAX_ITERS_DEFAULT"
@@ -26,6 +28,8 @@ Usage:
 Environment:
   DEV_DIR    Override the default projects directory (default: ~/dev)
   MAX_ITERS  Max iterations for ralph run (default: 6)
+  RALPH_LOG_MODE  Output mode: stream, quiet, log, log_only (default: stream)
+  RALPH_LOG_DIR   Log directory (default: <state_dir>/logs when logging)
 USAGE
 }
 
@@ -233,13 +237,47 @@ list_projects() {
   ensure_dev_dir
 
   local projects=()
+  local prune_dirs=(
+    node_modules
+    .git
+    .next
+    dist
+    build
+    coverage
+    .cache
+    .turbo
+    vendor
+    .venv
+    .pytest_cache
+  )
+
+  local prune_expr=""
+  local first=1
+  local name
+  for name in "${prune_dirs[@]}"; do
+    if [[ $first -eq 1 ]]; then
+      prune_expr="-name $name"
+      first=0
+    else
+      prune_expr="$prune_expr -o -name $name"
+    fi
+  done
+
   while IFS= read -r -d '' gitdir; do
     projects+=("$(dirname "$gitdir")")
-  done < <(find "$DEV_DIR_ABS" -name .git -prune -print0)
+  done < <(
+    find "$DEV_DIR_ABS" \
+      -type d \( $prune_expr \) -prune -o \
+      -type d -name .git -print0 -prune
+  )
 
   while IFS= read -r -d '' gitfile; do
     projects+=("$(dirname "$gitfile")")
-  done < <(find "$DEV_DIR_ABS" -type f -name .git -print0)
+  done < <(
+    find "$DEV_DIR_ABS" \
+      -type d \( $prune_expr \) -prune -o \
+      -type f -name .git -print0
+  )
 
   if [[ ${#projects[@]} -eq 0 ]]; then
     while IFS= read -r -d '' dir; do
@@ -307,6 +345,8 @@ run_loop() {
   local progress_file="$state_dir/PROGRESS.md"
   local instructions_file="$state_dir/INSTRUCTIONS.md"
   local todo_file="$state_dir/TODO.md"
+  local log_mode="$RALPH_LOG_MODE"
+  local log_dir="$RALPH_LOG_DIR"
 
   if goal_needs_setup "$goal_file"; then
     write_blocked "$progress_file" "Set a clear goal in $goal_file (use: ralph goal <project>)."
@@ -318,6 +358,15 @@ run_loop() {
     write_done "$progress_file"
     echo "DONE: $project_abs"
     return 0
+  fi
+
+  case "$log_mode" in
+    stream|quiet|log|log_only) ;;
+    *) die "Invalid RALPH_LOG_MODE: $log_mode" ;;
+  esac
+
+  if [[ -z "$log_dir" ]]; then
+    log_dir="$state_dir/logs"
   fi
 
   local i
@@ -344,15 +393,37 @@ run_loop() {
     set +e
     local prompt_file="$state_dir/ralph_prompt.txt"
     local last_message="$state_dir/last_message.txt"
+    local ts
+    local log_file
+    ts="$(date +%Y%m%d-%H%M%S)"
+    log_file="$log_dir/iter-${i}-${ts}.log"
     build_prompt "$project_abs" "$state_dir" "$i" "$max_iters" "$instructions_file" > "$prompt_file"
-    codex exec \
-      --cd "$project_abs" \
-      --add-dir "$state_dir" \
-      --skip-git-repo-check \
-      -s workspace-write \
-      -a never \
-      --output-last-message "$last_message" \
-      - < "$prompt_file"
+    run_codex() {
+      codex exec \
+        --cd "$project_abs" \
+        --add-dir "$state_dir" \
+        --skip-git-repo-check \
+        -s workspace-write \
+        -a never \
+        --output-last-message "$last_message" \
+        - < "$prompt_file"
+    }
+    case "$log_mode" in
+      stream)
+        run_codex
+        ;;
+      quiet)
+        run_codex >/dev/null 2>&1
+        ;;
+      log)
+        mkdir -p "$log_dir"
+        run_codex 2>&1 | tee "$log_file"
+        ;;
+      log_only)
+        mkdir -p "$log_dir"
+        run_codex >"$log_file" 2>&1
+        ;;
+    esac
     local status=$?
     set -e
 
