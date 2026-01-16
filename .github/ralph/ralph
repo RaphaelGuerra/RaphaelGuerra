@@ -9,6 +9,10 @@ MAX_ITERS="${MAX_ITERS:-$MAX_ITERS_DEFAULT}"
 DEV_DIR_ABS=""
 RALPH_LOG_MODE="${RALPH_LOG_MODE:-stream}"
 RALPH_LOG_DIR="${RALPH_LOG_DIR:-}"
+RALPH_AUTO_COMMIT="${RALPH_AUTO_COMMIT:-1}"
+RALPH_AUTO_PUSH="${RALPH_AUTO_PUSH:-1}"
+RALPH_GIT_REMOTE="${RALPH_GIT_REMOTE:-origin}"
+RALPH_GIT_BRANCH="${RALPH_GIT_BRANCH:-}"
 
 if [[ ! "$MAX_ITERS" =~ ^[0-9]+$ ]] || [[ "$MAX_ITERS" -lt 1 ]]; then
   MAX_ITERS="$MAX_ITERS_DEFAULT"
@@ -30,6 +34,10 @@ Environment:
   MAX_ITERS  Max iterations for ralph run (default: 6)
   RALPH_LOG_MODE  Output mode: stream, quiet, log, log_only (default: stream)
   RALPH_LOG_DIR   Log directory (default: <state_dir>/logs when logging)
+  RALPH_AUTO_COMMIT  Auto-commit after each iteration (default: 1)
+  RALPH_AUTO_PUSH    Auto-push after each commit (default: 1)
+  RALPH_GIT_REMOTE   Git remote for pushes (default: origin)
+  RALPH_GIT_BRANCH   Git branch for pushes (default: current branch)
 USAGE
 }
 
@@ -47,6 +55,13 @@ ensure_dev_dir() {
 
 ensure_state_root() {
   mkdir -p "$STATE_ROOT"
+}
+
+is_true() {
+  case "${1:-}" in
+    1|true|True|TRUE|yes|Yes|YES|on|On|ON) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 goal_needs_setup() {
@@ -139,6 +154,7 @@ EOF
 - Keep changes small and verifiable.
 - Run relevant tests if feasible; otherwise note "not run".
 - Update TODO.md and PROGRESS.md every loop.
+- In PROGRESS.md include sections: Task, Changes, Tests, Commit.
 EOF
   fi
 
@@ -155,6 +171,31 @@ EOF
 
 first_line() {
   head -n 1 "$1" 2>/dev/null || true
+}
+
+extract_field() {
+  local label="$1"
+  local file="$2"
+  awk -v label="$label" '
+    $0 ~ "^" label ":" {
+      sub("^" label ":[[:space:]]*", "", $0)
+      print
+      exit
+    }
+  ' "$file"
+}
+
+extract_section() {
+  local label="$1"
+  local file="$2"
+  awk -v label="$label" '
+    $0 ~ "^" label ":" { in=1; next }
+    in {
+      if ($0 ~ /^[A-Za-z].*:/) { exit }
+      if ($0 ~ /^$/) { exit }
+      print
+    }
+  ' "$file"
 }
 
 write_blocked() {
@@ -193,6 +234,85 @@ todo_is_done() {
   [[ -f "$todo_file" ]] && grep -qE "\\[x\\] ALL_TASKS_COMPLETE" "$todo_file"
 }
 
+auto_commit_and_push() {
+  local project_abs="$1"
+  local state_dir="$2"
+  local iter="$3"
+  local progress_file="$state_dir/PROGRESS.md"
+
+  if ! is_true "$RALPH_AUTO_COMMIT"; then
+    return 0
+  fi
+
+  if ! git -C "$project_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [[ -z "$(git -C "$project_abs" status --porcelain)" ]]; then
+    return 0
+  fi
+
+  local status_line
+  status_line="$(first_line "$progress_file")"
+  if [[ "$status_line" == "BLOCKED" ]]; then
+    return 0
+  fi
+
+  local commit_line task_line tests_line
+  commit_line="$(extract_field "Commit" "$progress_file")"
+  task_line="$(extract_field "Task" "$progress_file")"
+  tests_line="$(extract_field "Tests" "$progress_file")"
+
+  local subject
+  if [[ -n "$commit_line" ]]; then
+    subject="$commit_line"
+  elif [[ -n "$task_line" ]]; then
+    subject="$task_line"
+  else
+    subject="ralph: iteration ${iter}"
+  fi
+
+  git -C "$project_abs" add -A
+  if git -C "$project_abs" diff --cached --quiet; then
+    return 0
+  fi
+
+  local body=()
+  if [[ -n "$task_line" && "$task_line" != "$subject" ]]; then
+    body+=("Task: $task_line")
+  fi
+  if [[ -n "$tests_line" ]]; then
+    body+=("Tests: $tests_line")
+  else
+    body+=("Tests: not run")
+  fi
+
+  local changes
+  changes="$(extract_section "Changes" "$progress_file")"
+  if [[ -n "$changes" ]]; then
+    body+=("Changes:" "$changes")
+  fi
+
+  local commit_args=("-m" "$subject")
+  local line
+  for line in "${body[@]}"; do
+    commit_args+=("-m" "$line")
+  done
+  git -C "$project_abs" commit "${commit_args[@]}"
+
+  if is_true "$RALPH_AUTO_PUSH"; then
+    local remote="$RALPH_GIT_REMOTE"
+    local branch="$RALPH_GIT_BRANCH"
+    if [[ -z "$branch" ]]; then
+      branch="$(git -C "$project_abs" rev-parse --abbrev-ref HEAD)"
+    fi
+    if ! git -C "$project_abs" push "$remote" "$branch"; then
+      write_blocked "$progress_file" "git push failed for ${remote}/${branch}. Resolve and rerun."
+      return 1
+    fi
+  fi
+}
+
 build_prompt() {
   local project_abs="$1"
   local state_dir="$2"
@@ -214,9 +334,12 @@ Required steps:
 4) Otherwise, pick exactly ONE unchecked task from TODO.md and complete it.
 5) Update "$state_dir/TODO.md" to check off the task you completed.
 6) If all tasks are complete, mark "- [x] ALL_TASKS_COMPLETE".
-7) Update "$state_dir/PROGRESS.md":
+7) Update "$state_dir/PROGRESS.md" with this format:
    - First line: DONE if the goal is achieved, BLOCKED if you need user input, otherwise IN_PROGRESS.
-   - Include a short bullet list: changes made, tests run (or "not run"), and next steps.
+   - Task: one-line summary of the task completed.
+   - Changes: bullet list of changes made.
+   - Tests: command(s) run or "not run".
+   - Commit: one-line commit subject in imperative mood.
 
 Safety rules (must follow):
 - Never read, print, or exfiltrate secrets.
@@ -431,6 +554,11 @@ run_loop() {
       write_blocked "$progress_file" "codex exited with status $status. Resolve the error and rerun."
       echo "BLOCKED: $project_abs (codex exit $status)"
       return $status
+    fi
+
+    if ! auto_commit_and_push "$project_abs" "$state_dir" "$i"; then
+      echo "BLOCKED: $project_abs (auto-commit/push failed)"
+      return 1
     fi
 
     line="$(first_line "$progress_file")"
