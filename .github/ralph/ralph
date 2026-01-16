@@ -1,0 +1,427 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+DEV_DIR="${DEV_DIR:-$HOME/dev}"
+STATE_ROOT="$HOME/.ralph/state"
+MAX_ITERS_DEFAULT=6
+MAX_ITERS="${MAX_ITERS:-$MAX_ITERS_DEFAULT}"
+DEV_DIR_ABS=""
+
+if [[ ! "$MAX_ITERS" =~ ^[0-9]+$ ]] || [[ "$MAX_ITERS" -lt 1 ]]; then
+  MAX_ITERS="$MAX_ITERS_DEFAULT"
+fi
+
+usage() {
+  cat <<'USAGE'
+ralph: development loop runner for projects under ~/dev
+
+Usage:
+  ralph pick
+  ralph run <project>
+  ralph goal <project>
+  ralph progress <project>
+  ralph all
+
+Environment:
+  DEV_DIR    Override the default projects directory (default: ~/dev)
+  MAX_ITERS  Max iterations for ralph run (default: 6)
+USAGE
+}
+
+die() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+ensure_dev_dir() {
+  if [[ ! -d "$DEV_DIR" ]]; then
+    die "DEV_DIR not found: $DEV_DIR"
+  fi
+  DEV_DIR_ABS="$(cd "$DEV_DIR" && pwd)"
+}
+
+ensure_state_root() {
+  mkdir -p "$STATE_ROOT"
+}
+
+goal_needs_setup() {
+  local goal_file="$1"
+  if [[ ! -s "$goal_file" ]]; then
+    return 0
+  fi
+  if grep -qs "Describe the improvement goal for this project." "$goal_file"; then
+    return 0
+  fi
+  return 1
+}
+
+resolve_project() {
+  local input="$1"
+  local candidate=""
+
+  if [[ "$input" == /* ]]; then
+    candidate="$input"
+  elif [[ "$input" == "~/"* ]]; then
+    candidate="$HOME/${input#~/}"
+  else
+    candidate="$DEV_DIR/$input"
+  fi
+
+  if [[ ! -d "$candidate" ]]; then
+    die "Project directory not found: $candidate"
+  fi
+
+  local project_abs
+  project_abs="$(cd "$candidate" && pwd)"
+
+  case "$project_abs" in
+    "$DEV_DIR_ABS"/*) ;;
+    *) die "Project must be under $DEV_DIR_ABS" ;;
+  esac
+
+  if [[ "$project_abs" == "$DEV_DIR_ABS" ]]; then
+    die "Project must be a subdirectory of $DEV_DIR_ABS"
+  fi
+
+  echo "$project_abs"
+}
+
+slugify() {
+  local rel="$1"
+  local slug
+  slug="$(printf '%s' "$rel" | tr '/ ' '__' | tr -cd 'A-Za-z0-9._-')"
+  if [[ -z "$slug" ]]; then
+    slug="project"
+  fi
+  echo "$slug"
+}
+
+ensure_state_files() {
+  local project_abs="$1"
+  local rel="${project_abs#"$DEV_DIR_ABS"/}"
+  if [[ "$rel" == "$project_abs" ]]; then
+    die "Project must be under $DEV_DIR_ABS"
+  fi
+
+  local slug
+  slug="$(slugify "$rel")"
+  local dir="$STATE_ROOT/$slug"
+  mkdir -p "$dir"
+
+  local goal="$dir/GOAL.md"
+  local progress="$dir/PROGRESS.md"
+
+  if [[ ! -f "$goal" ]]; then
+    cat <<'EOF' > "$goal"
+# Goal
+Describe the improvement goal for this project.
+EOF
+  fi
+
+  if [[ ! -f "$progress" ]]; then
+    cat <<'EOF' > "$progress"
+NOT_STARTED
+Add progress notes here.
+EOF
+  fi
+
+  echo "$dir"
+}
+
+first_line() {
+  head -n 1 "$1" 2>/dev/null || true
+}
+
+write_blocked() {
+  local progress_file="$1"
+  local reason="$2"
+  local tmp="${progress_file}.tmp"
+
+  {
+    echo "BLOCKED"
+    echo "$reason"
+    echo ""
+    if [[ -f "$progress_file" ]]; then
+      tail -n +2 "$progress_file" || true
+    fi
+  } > "$tmp"
+
+  mv "$tmp" "$progress_file"
+}
+
+build_prompt() {
+  local project_abs="$1"
+  local state_dir="$2"
+  local iter="$3"
+  local max_iters="$4"
+
+  cat <<EOF
+You are running the Ralph development loop.
+Project directory: $project_abs
+State directory: $state_dir
+
+Iteration: $iter of $max_iters
+
+Required steps:
+1) Read "$state_dir/GOAL.md" and "$state_dir/PROGRESS.md".
+2) If the goal is missing or unclear, update PROGRESS.md with BLOCKED as the first line and explain what is needed. Then stop.
+3) Make ONE small, safe improvement toward the goal.
+4) Update "$state_dir/PROGRESS.md":
+   - First line: DONE if the goal is achieved, BLOCKED if you need user input, otherwise IN_PROGRESS.
+   - Include a short bullet list: changes made, tests run (or "not run"), and next steps.
+
+Safety rules (must follow):
+- Never read, print, or exfiltrate secrets.
+- Never read or output .env contents. Do not open .env files.
+- Never run destructive commands (rm -rf, etc).
+- Do not ask for user input; run autonomously.
+- Only modify files within the project directory and "$state_dir".
+EOF
+}
+
+list_projects() {
+  ensure_dev_dir
+
+  local projects=()
+  while IFS= read -r -d '' gitdir; do
+    projects+=("$(dirname "$gitdir")")
+  done < <(find "$DEV_DIR_ABS" -name .git -prune -print0)
+
+  while IFS= read -r -d '' gitfile; do
+    projects+=("$(dirname "$gitfile")")
+  done < <(find "$DEV_DIR_ABS" -type f -name .git -print0)
+
+  if [[ ${#projects[@]} -eq 0 ]]; then
+    while IFS= read -r -d '' dir; do
+      projects+=("$dir")
+    done < <(find "$DEV_DIR_ABS" -mindepth 1 -maxdepth 1 -type d -print0)
+  fi
+
+  IFS=$'\n' projects=($(printf '%s\n' "${projects[@]}" | LC_ALL=C sort -u))
+  IFS=$'\n\t'
+
+  printf '%s\n' "${projects[@]}"
+}
+
+pick_project() {
+  ensure_dev_dir
+
+  local projects=()
+  while IFS= read -r project; do
+    [[ -n "$project" ]] && projects+=("$project")
+  done < <(list_projects)
+
+  if [[ ${#projects[@]} -eq 0 ]]; then
+    die "No projects found under $DEV_DIR_ABS"
+  fi
+
+  IFS=$'\n' projects=($(printf '%s\n' "${projects[@]}" | LC_ALL=C sort))
+  IFS=$'\n\t'
+
+  printf 'Select a project under %s:\n' "$DEV_DIR_ABS" >&2
+  local i
+  for ((i=0; i<${#projects[@]}; i++)); do
+    local rel="${projects[$i]#"$DEV_DIR_ABS"/}"
+    if [[ "$rel" == "${projects[$i]}" ]]; then
+      rel="${projects[$i]}"
+    fi
+    printf '  %d) %s\n' "$((i+1))" "$rel" >&2
+  done
+  printf 'Enter number: ' >&2
+
+  local choice
+  read -r choice
+  if [[ ! "$choice" =~ ^[0-9]+$ ]]; then
+    die "Invalid selection"
+  fi
+  if (( choice < 1 || choice > ${#projects[@]} )); then
+    die "Selection out of range"
+  fi
+
+  echo "${projects[$((choice-1))]}"
+}
+
+run_loop() {
+  local project_input="$1"
+  local max_iters="$2"
+
+  ensure_dev_dir
+  ensure_state_root
+
+  local project_abs
+  project_abs="$(resolve_project "$project_input")"
+
+  local state_dir
+  state_dir="$(ensure_state_files "$project_abs")"
+  local goal_file="$state_dir/GOAL.md"
+  local progress_file="$state_dir/PROGRESS.md"
+
+  if goal_needs_setup "$goal_file"; then
+    write_blocked "$progress_file" "Set a clear goal in $goal_file (use: ralph goal <project>)."
+    echo "BLOCKED: $project_abs (goal not set)"
+    return 0
+  fi
+
+  local i
+  for ((i=1; i<=max_iters; i++)); do
+    local line
+    line="$(first_line "$progress_file")"
+
+    if [[ "$line" == "DONE" ]]; then
+      echo "DONE: $project_abs"
+      return 0
+    fi
+    if [[ "$line" == "BLOCKED" ]]; then
+      echo "BLOCKED: $project_abs"
+      return 0
+    fi
+
+    if ! command -v codex >/dev/null 2>&1; then
+      write_blocked "$progress_file" "codex not found in PATH. Install Codex CLI and retry."
+      echo "BLOCKED: $project_abs (codex not found)"
+      return 1
+    fi
+
+    echo "Running codex ($i/$max_iters) in $project_abs"
+    set +e
+    local prompt_file="$state_dir/ralph_prompt.txt"
+    local last_message="$state_dir/last_message.txt"
+    build_prompt "$project_abs" "$state_dir" "$i" "$max_iters" > "$prompt_file"
+    codex exec \
+      --cd "$project_abs" \
+      --add-dir "$state_dir" \
+      --skip-git-repo-check \
+      -s workspace-write \
+      -c ask_for_approval=never \
+      --output-last-message "$last_message" \
+      - < "$prompt_file"
+    local status=$?
+    set -e
+
+    if [[ $status -ne 0 ]]; then
+      write_blocked "$progress_file" "codex exited with status $status. Resolve the error and rerun."
+      echo "BLOCKED: $project_abs (codex exit $status)"
+      return $status
+    fi
+
+    line="$(first_line "$progress_file")"
+    if [[ "$line" == "DONE" ]]; then
+      echo "DONE: $project_abs"
+      return 0
+    fi
+    if [[ "$line" == "BLOCKED" ]]; then
+      echo "BLOCKED: $project_abs"
+      return 0
+    fi
+  done
+}
+
+cmd_goal() {
+  local project_abs
+  project_abs="$(resolve_project "$1")"
+  local state_dir
+  state_dir="$(ensure_state_files "$project_abs")"
+
+  local goal_file="$state_dir/GOAL.md"
+  local editor="${EDITOR:-}"
+
+  if [[ -n "$editor" ]] && command -v "$editor" >/dev/null 2>&1; then
+    "$editor" "$goal_file"
+    return 0
+  fi
+
+  if command -v nano >/dev/null 2>&1; then
+    nano "$goal_file"
+    return 0
+  fi
+  if command -v vim >/dev/null 2>&1; then
+    vim "$goal_file"
+    return 0
+  fi
+  if command -v vi >/dev/null 2>&1; then
+    vi "$goal_file"
+    return 0
+  fi
+
+  die "No editor found. Set EDITOR to your preferred editor."
+}
+
+cmd_progress() {
+  local project_abs
+  project_abs="$(resolve_project "$1")"
+  local state_dir
+  state_dir="$(ensure_state_files "$project_abs")"
+
+  cat "$state_dir/PROGRESS.md"
+}
+
+cmd_all() {
+  ensure_dev_dir
+  ensure_state_root
+
+  local projects=()
+  while IFS= read -r project; do
+    [[ -n "$project" ]] && projects+=("$project")
+  done < <(list_projects)
+
+  if [[ ${#projects[@]} -eq 0 ]]; then
+    die "No projects found under $DEV_DIR_ABS"
+  fi
+
+  IFS=$'\n' projects=($(printf '%s\n' "${projects[@]}" | LC_ALL=C sort))
+  IFS=$'\n\t'
+
+  local project
+  for project in "${projects[@]}"; do
+    if ! run_loop "$project" 1; then
+      echo "WARN: ralph all failed for $project" >&2
+    fi
+  done
+}
+
+main() {
+  if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+  fi
+
+  ensure_dev_dir
+  ensure_state_root
+
+  case "$1" in
+    -h|--help|help)
+      usage
+      ;;
+    pick)
+      pick_project
+      ;;
+    run)
+      if [[ $# -ne 2 ]]; then
+        die "Usage: ralph run <project>"
+      fi
+      run_loop "$2" "$MAX_ITERS"
+      ;;
+    goal)
+      if [[ $# -ne 2 ]]; then
+        die "Usage: ralph goal <project>"
+      fi
+      cmd_goal "$2"
+      ;;
+    progress)
+      if [[ $# -ne 2 ]]; then
+        die "Usage: ralph progress <project>"
+      fi
+      cmd_progress "$2"
+      ;;
+    all)
+      cmd_all
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

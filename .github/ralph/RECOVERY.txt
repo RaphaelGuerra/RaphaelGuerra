@@ -1,6 +1,8 @@
 Ralph recovery notes
 
-This folder stores a backup copy of setup-ralph.sh.
+This folder stores backup copies of:
+- setup-ralph.sh (iCloud sync + symlinks)
+- ralph (main runner script)
 
 If you lose the local setup script, you can restore it:
 1) Copy setup-ralph.sh to iCloud Drive:
@@ -11,3 +13,6 @@ If you lose the local setup script, you can restore it:
    source ~/.zshrc
 
 The setup script will link ~/bin/ralph and ~/.ralph/state to iCloud Drive.
+
+If you also need to restore the runner script, copy:
+  ralph -> ~/Library/Mobile Documents/com~apple~CloudDocs/ralph/ralph
