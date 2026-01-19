@@ -20,7 +20,6 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
   <img alt="Contribution snake" src="assets/snake-neon.svg?v=2" />
 </picture>
 
-
 ## About Me
 
 👋 I mix tech, philosophy, history, and neuroscience. I like understanding how
