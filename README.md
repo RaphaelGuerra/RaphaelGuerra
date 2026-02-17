@@ -38,16 +38,29 @@ clean execution are my thing.
 
 ## Featured Projects
 
-- **[ledger](https://github.com/RaphaelGuerra/ledger)**
-  *JavaScript* — Mini-ERP “Cash Ledger”: daily/monthly entries, Excel import,
-  reconciliation flags.
+- **[ez-order](https://github.com/RaphaelGuerra/ez-order)**
+  *TypeScript* — Lightweight ordering flow focused on speed and clean UX.
 
-- **[pos](https://github.com/RaphaelGuerra/pos)**
-  *JavaScript* — Lightweight POS experiments that complement the ledger flow.
+- **[Stellar](https://github.com/RaphaelGuerra/Stellar)**
+  *TypeScript* — Birth-chart app with Big 3 cards, synastry/transits/progressions,
+  and local-first UX.
+
+- **[eco-game](https://github.com/RaphaelGuerra/eco-game)**
+  *TypeScript* — Duolingo-style eco training app with XP and streaks.
 
 - **[next-image-studio](https://github.com/RaphaelGuerra/next-image-studio)**
   *TypeScript* — Next.js image utilities / studio; good sample of modern TS +
   React patterns.
+
+- **[eco-explorer](https://github.com/RaphaelGuerra/eco-explorer)**
+  *JavaScript* — Educational ecology simulation with dynamic systems.
+
+- **[pos](https://github.com/RaphaelGuerra/pos)**
+  *JavaScript* — Lightweight POS experiments that complement the ledger flow.
+
+- **[ledger](https://github.com/RaphaelGuerra/ledger)**
+  *JavaScript* — Mini-ERP “Cash Ledger”: daily/monthly entries, Excel import,
+  reconciliation flags.
 
 - **[txtRefine](https://github.com/RaphaelGuerra/txtRefine)**
   *Python* — Text cleaning utilities; handy in ETL/LLM preprocessing pipelines.
@@ -55,6 +68,9 @@ clean execution are my thing.
 - **[transcriber](https://github.com/RaphaelGuerra/transcriber)**
   *Python* — Audio → text transcription experiments; basis for OCR/LLM-adjacent
   tooling.
+
+- **[converter](https://github.com/RaphaelGuerra/converter)**
+  *Python* — M4A → MP3 CLI converter with quality/size presets.
 
 - **[weight-tracker](https://github.com/RaphaelGuerra/weight-tracker)**
   *TypeScript (MIT)* — Minimal TS app with clean UI.
