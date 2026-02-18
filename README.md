@@ -19,6 +19,7 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
   <source media="(prefers-color-scheme: light)" srcset="assets/snake-neon.svg?v=2" />
   <img alt="Contribution snake" src="assets/snake-neon.svg?v=2" />
 </picture>
+![My GitHub Game](game.gif)
 
 ## About Me
 
