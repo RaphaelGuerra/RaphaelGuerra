@@ -14,12 +14,7 @@ Aristotle's foundation, Augustine's bridge, seeking Leibniz's synthesis.
 [![Lint](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/lint.yml)
 [![Security](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/RaphaelGuerra/actions/workflows/security.yml)
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/snake-dark-neon.svg?v=2" />
-  <source media="(prefers-color-scheme: light)" srcset="assets/snake-neon.svg?v=2" />
-  <img alt="Contribution snake" src="assets/snake-neon.svg?v=2" />
-</picture>
-![My GitHub Game](game.gif)
+![GitHub contribution space shooter](game.gif)
 
 ## About Me
 
