@@ -34,6 +34,9 @@ clean execution are my thing.
 
 ## Featured Projects
 
+- **[ez-match](https://github.com/RaphaelGuerra/ez-match)**
+  *TypeScript* - Reconciliation workspace for weekly matching, exceptions, and exports.
+
 - **[ez-order](https://github.com/RaphaelGuerra/ez-order)**
   *TypeScript* — Lightweight ordering flow focused on speed and clean UX.
 
