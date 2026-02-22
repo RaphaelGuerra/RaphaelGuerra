@@ -40,6 +40,16 @@ clean execution are my thing.
 - **[ez-order](https://github.com/RaphaelGuerra/ez-order)**
   *TypeScript* — Lightweight ordering flow focused on speed and clean UX.
 
+- **[ez-market](https://github.com/RaphaelGuerra/ez-market)**
+  [live](https://ez-market.phaelix.com/)
+  *TypeScript* — API-first grocery ordering engine with multi-market pricing
+  and queue-based checkout orchestration.
+
+- **[ez-watch](https://github.com/RaphaelGuerra/ez-watch)**
+  [live](https://ez-watch.phaelix.com/health/live)
+  *TypeScript* — Computer-vision alert relay with policy rules, dedupe windows,
+  and real-time notification delivery.
+
 - **[Stellar](https://github.com/RaphaelGuerra/Stellar)**
   *TypeScript* — Birth-chart app with Big 3 cards, synastry/transits/progressions,
   and local-first UX.
