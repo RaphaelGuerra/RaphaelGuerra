@@ -34,6 +34,10 @@ clean execution are my thing.
 
 ## Featured Projects
 
+- **Gandalf (OpenClaw)** *(Private)*
+  [learn more](https://gandalf.phaelix.com) • [moltbook](https://www.moltbook.com/u/GandalfRaphael)
+  Long‑term memory helper with guardrails and safety backups.
+
 - **[ez-match](https://github.com/RaphaelGuerra/ez-match)**
   *TypeScript* - Reconciliation workspace for weekly matching, exceptions, and exports.
 
