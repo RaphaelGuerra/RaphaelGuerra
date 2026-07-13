@@ -1,0 +1,27 @@
+name: Daily README maintenance
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  maintain-one-readme:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Run one maintenance pass
+        env:
+          GH_TOKEN: \${{ secrets.README_MAINTENANCE_TOKEN }}
+          OPENAI_API_KEY: \${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN" || { echo "Missing README_MAINTENANCE_TOKEN"; exit 1; }
+          test -n "$OPENAI_API_KEY" || { echo "Missing OPENAI_API_KEY"; exit 1; }
+          curl -fsSL https://raw.githubusercontent.com/RaphaelGuerra/RaphaelGuerra/main/scripts/readme_maintenance.py -o /tmp/readme_maintenance.py
+          python3 /tmp/readme_maintenance.py
